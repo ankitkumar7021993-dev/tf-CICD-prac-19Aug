@@ -44,22 +44,22 @@ jobs:
 
       # 4. Move to Terraform directory
       - name: Terraform Init
-        working-directory: Azure_Landing_zone/Environment/Dev
+        working-directory: ./Azure_Landing_zone/Environment/Dev
         run: terraform init
 
       # 5. Terraform Format Check
       - name: Terraform Format
-        working-directory: Azure_Landing_zone/Environment/Dev
+        working-directory: ./Azure_Landing_zone/Environment/Dev
         run: terraform fmt
 
       # 6. Terraform Validate
       - name: Terraform Validate
-        working-directory: Azure_Landing_zone/Environment/Dev
+        working-directory: ./Azure_Landing_zone/Environment/Dev
         run: terraform validate
 
       # 7. Terraform Plan
       - name: Terraform Plan
-        working-directory: Azure_Landing_zone/Environment/Dev
+        working-directory: ./Azure_Landing_zone/Environment/Dev
         run: terraform plan -out=tfplan
 
       # 8. Terraform Apply
