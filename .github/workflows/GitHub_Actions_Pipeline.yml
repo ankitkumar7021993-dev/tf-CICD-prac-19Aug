@@ -1,70 +1,84 @@
-name: Terraform CI-CD
+name: "Terraform CI/CD Pipeline"
 
 on:
   push:
     branches:
-      - 'feature/**'
-      - main
-
+      - "feature/**"
+      - "main"
   pull_request:
     branches:
-      - main
-
-permissions:
-  contents: read
+      - "main"
 
 env:
-  TF_WORKING_DIR: ./Azure_Landing_zone/Environment/Dev
-
   ARM_CLIENT_ID: ${{ secrets.AZURE_CLIENT_ID }}
   ARM_CLIENT_SECRET: ${{ secrets.AZURE_CLIENT_SECRET }}
-  ARM_TENANT_ID: ${{ secrets.AZURE_TENANT_ID }}
   ARM_SUBSCRIPTION_ID: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+  WORKING_DIR: "./Azure_Landing_zone/Environment/Dev"
 
 jobs:
-
-  terraform:
-    name: Terraform CI-CD
+  # 1. Feature Branches par Push hone par Chalega
+  feature-checks:
+    if: github.event_name == 'push' && github.ref != 'refs/heads/main'
     runs-on: ubuntu-latest
-
+    defaults:
+      run:
+        working-directory: ${{ env.WORKING_DIR }}
     steps:
-
-      # Checkout source code
-      - name: Checkout Repository
+      - name: Checkout Code
         uses: actions/checkout@v4
 
-      # Install exact Terraform version
       - name: Setup Terraform
         uses: hashicorp/setup-terraform@v3
-        with:
-          terraform_version: 1.15.3
 
-      # Verify Terraform version
-      - name: Terraform Version
-        run: terraform version
-
-      # Terraform Init
       - name: Terraform Init
-        working-directory: ${{ env.TF_WORKING_DIR }}
         run: terraform init
 
-      # Terraform Format Check
-      - name: Terraform Format Check
-        working-directory: ${{ env.TF_WORKING_DIR }}
+      - name: Terraform Format
         run: terraform fmt
 
-      # Terraform Validate
       - name: Terraform Validate
-        working-directory: ${{ env.TF_WORKING_DIR }}
         run: terraform validate
 
-      # Terraform Plan
       - name: Terraform Plan
-        working-directory: ${{ env.TF_WORKING_DIR }}
-        run: terraform plan
+        run: terraform plan -var-file="terraform.tfvars"
 
-      # Terraform Apply only on main
+  # 2. Main Branch par PR Raise hone par ya Direct Push/Merge hone par Plan chalega
+  terraform-plan:
+    if: github.event_name == 'pull_request' || (github.event_name == 'push' && github.ref == 'refs/heads/main')
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: ${{ env.WORKING_DIR }}
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v3
+
+      - name: Terraform Init
+        run: terraform init
+
+      - name: Terraform Plan
+        run: terraform plan -var-file="terraform.tfvars"
+
+  # 3. Main Branch me Merge hone par Apply chalega
+  terraform-apply:
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    needs: terraform-plan
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: ${{ env.WORKING_DIR }}
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v3
+
+      - name: Terraform Init
+        run: terraform init
+
       - name: Terraform Apply
-        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
-        working-directory: ${{ env.TF_WORKING_DIR }}
-        run: terraform apply -auto-approve
+        run: terraform apply -var-file="terraform.tfvars" -auto-approve
