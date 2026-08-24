@@ -57,7 +57,7 @@ jobs:
         working-directory: Azure_Landing_zone/Environment/Dev
         run: terraform validate
 
-      # 7. Terraform Plan
+      # 7. Terraform Plan bhai ji
       - name: Terraform Plan
         working-directory: Azure_Landing_zone/Environment/Dev
         run: terraform plan -out=tfplan
