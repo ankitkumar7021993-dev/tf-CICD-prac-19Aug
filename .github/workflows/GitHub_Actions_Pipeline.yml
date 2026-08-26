@@ -1,9 +1,10 @@
-name: Terraform CI/CD
+name: Terraform CI-CD
 
 on:
   push:
     branches:
-      - '**'
+      - 'feature/**'
+      - main
 
   pull_request:
     branches:
@@ -12,59 +13,60 @@ on:
 permissions:
   contents: read
 
+env:
+  TF_WORKING_DIR: ./Azure_Landing_zone/Environment/Dev
+
+  ARM_CLIENT_ID: ${{ secrets.AZURE_CLIENT_ID }}
+  ARM_CLIENT_SECRET: ${{ secrets.AZURE_CLIENT_SECRET }}
+  ARM_TENANT_ID: ${{ secrets.AZURE_TENANT_ID }}
+  ARM_SUBSCRIPTION_ID: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+
 jobs:
 
   terraform:
-    name: Terraform CI/CD
+    name: Terraform CI-CD
     runs-on: ubuntu-latest
 
     steps:
 
-      # 1. Checkout repository
-      - name: Checkout Code
+      # Checkout source code
+      - name: Checkout Repository
         uses: actions/checkout@v4
 
-      # 2. Login to Azure using Service Principal
-      - name: Azure Login
-        uses: azure/login@v2
-        with:
-          creds: |
-            {
-              "clientId": "${{ secrets.AZURE_CLIENT_ID }}",
-              "clientSecret": "${{ secrets.AZURE_CLIENT_SECRET }}",
-              "subscriptionId": "${{ secrets.AZURE_SUBSCRIPTION_ID }}",
-              "tenantId": "${{ secrets.AZURE_TENANT_ID }}"
-            }
-
-      # 3. Install Terraform
+      # Install exact Terraform version
       - name: Setup Terraform
         uses: hashicorp/setup-terraform@v3
         with:
           terraform_version: 1.15.3
 
-      # 4. Move to Terraform directory
+      # Verify Terraform version
+      - name: Terraform Version
+        run: terraform version
+
+      # Terraform Init
       - name: Terraform Init
-        working-directory: Azure_Landing_zone/Environment/Dev
+        working-directory: ${{ env.TF_WORKING_DIR }}
         run: terraform init
 
-      # 5. Terraform Format Check
-      - name: Terraform Format
-        working-directory: Azure_Landing_zone/Environment/Dev
-        run: terraform fmt -check -recursive
+      # Terraform Format Check
+      - name: Terraform Format Check
+        working-directory: ${{ env.TF_WORKING_DIR }}
+        run: terraform fmt
 
-      # 6. Terraform Validate
+      # Terraform Validate
       - name: Terraform Validate
-        working-directory: Azure_Landing_zone/Environment/Dev
+        working-directory: ${{ env.TF_WORKING_DIR }}
         run: terraform validate
 
-      # 7. Terraform Plan bhai ji
+      # Terraform Plan
       - name: Terraform Plan
-        working-directory: Azure_Landing_zone/Environment/Dev
+        working-directory: ${{ env.TF_WORKING_DIR }}
         run: terraform plan -out=tfplan
 
-      # 8. Terraform Apply
-      # Only runs when code is pushed to main
+      # Terraform Apply only on main
       - name: Terraform Apply
-        if: github.ref == 'refs/heads/main' && github.event_name == 'push'
-        working-directory: Azure_Landing_zone/Environment/Dev
+        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+        working-directory: ${{ env.TF_WORKING_DIR }}
         run: terraform apply -auto-approve tfplan
+
+
